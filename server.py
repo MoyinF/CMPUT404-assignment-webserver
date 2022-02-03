@@ -52,13 +52,14 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.isfile = os.path.exists(self.path)
         self.filetype = mimetypes.guess_type(self.path)[0]
         self.content_length = len(self.decoded)
+        self.base_url = "http://127.0.0.1:8080"
         self.url_change = False
 
 
         if self.filetype is None and self.path[-1] != "/":
             self.path = self.path + "/"
             self.url_change = True
-            self.new_url = "http://127.0.0.1:8080" + self.fname + "/"
+            self.new_url = self.base_url + self.fname + "/"
         if "hardcode" in self.fname:
             self.filetype = "text/html"
 
@@ -85,6 +86,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
                 self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
                 self.request.sendall(bytearray("Content-Type: {}\r\n".format(self.filetype),'utf-8'))
+                if self.filetype is not None:
+                    self.request.sendall(bytearray("Link: <{}>; rel=prefetch".format(self.base_url + self.fname), 'utf-8'))
                 self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
 
             else:
@@ -103,7 +106,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
             self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
             self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
-            
+
+
 
 
 if __name__ == "__main__":
