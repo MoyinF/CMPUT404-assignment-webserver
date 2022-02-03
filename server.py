@@ -36,6 +36,7 @@ mimetypes.add_type("text/html", ".html", True)
 # try: curl -v -X GET http://127.0.0.1:8080/
 
 
+
 class MyWebServer(socketserver.BaseRequestHandler):
 
     def handle(self):
@@ -51,30 +52,58 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.isfile = os.path.exists(self.path)
         self.filetype = mimetypes.guess_type(self.path)[0]
         self.content_length = len(self.decoded)
+        self.url_change = False
+
+
+        if self.filetype is None and self.path[-1] != "/":
+            self.path = self.path + "/"
+            self.url_change = True
+            self.new_url = "http://127.0.0.1:8080" + self.fname + "/"
+        if "hardcode" in self.fname:
+            self.filetype = "text/html"
+
 
         if self.decoded_list[0] == "GET":
-            if self.isfile:
+            if self.path[:18] == "www/../../../../..":
+                self.request.sendall(bytearray("HTTP/1.1 404 Not Found \r\n",'utf-8'))
+                self.request.sendall(bytearray("Date: {}\r\n".format(self.date),'utf-8'))
+                self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
+                self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
+                self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
+
+            elif self.url_change and self.isfile:
+                self.request.sendall(bytearray("HTTP/1.1 301 Moved Permanently \r\n",'utf-8'))
+                self.request.sendall(bytearray("Date: {}\r\n".format(self.date),'utf-8'))
+                self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
+                self.request.sendall(bytearray("Location: {}\r\n".format(self.new_url),'utf-8'))
+                self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
+
+
+            elif self.isfile:
                 self.request.sendall(bytearray("HTTP/1.1 200 OK \r\n",'utf-8'))
                 self.request.sendall(bytearray("Date: {}\r\n".format(self.date),'utf-8'))
                 self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
                 self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
                 self.request.sendall(bytearray("Content-Type: {}\r\n".format(self.filetype),'utf-8'))
                 self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
+
             else:
                 self.request.sendall(bytearray("HTTP/1.1 404 Not Found \r\n",'utf-8'))
                 self.request.sendall(bytearray("Date: {}\r\n".format(self.date),'utf-8'))
                 self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
                 self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
                 self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
+
+
+
+
         else:
             self.request.sendall(bytearray("HTTP/1.1 405 Not Found \r\n",'utf-8'))
             self.request.sendall(bytearray("Date: {}\r\n".format(self.date),'utf-8'))
             self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
             self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
             self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
-
-# self.request.sendall(bytearray(self.response,'utf-8'))
-# self.request.sendall(bytearray("",'utf-8'))
+            
 
 
 if __name__ == "__main__":
