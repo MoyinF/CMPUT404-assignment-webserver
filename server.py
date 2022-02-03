@@ -3,25 +3,13 @@ import socketserver
 from datetime import datetime
 import os
 from pathlib import Path
+import mimetypes
+from email.message import EmailMessage
 
-'''
-# this is meant to give a relative path from the current location
-data_folder = Path("source_data/text_files/")
-file_to_open = data_folder / "raw_data.txt"
+mimetypes.add_type("text/css", ".css", True)
+mimetypes.add_type("text/html", ".html", True)
 
-# this returns the filename from the path
-os.path.basename(self.path)
 
-# this is another way of doing it relatively
-cur_path = os.path.dirname(__file__)
-
-new_path = os.path.relpath('..\\subfldr1\\testfile.txt', cur_path)
-with open(new_path, 'w') as f:
-    f.write(data)
-
-# to check if the file exists
-os.path.isfile(fname)
-'''
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +35,16 @@ os.path.isfile(fname)
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
+"""
+HTTP/1.1 200 OK
+Date: Mon, 27 Jul 2009 12:28:53 GMT
+Server: Apache/2.2.14 (Win32)
+Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
+Content-Length: 88
+Content-Type: text/html
+Connection: Closed
+"""
+
 
 class MyWebServer(socketserver.BaseRequestHandler):
 
@@ -61,28 +59,32 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.fname = self.decoded_list[1]
         self.path = self.data_folder + self.fname
         self.isfile = os.path.exists(self.path)
-        self.split_fname = self.fname.split(".")
-        self.filetype = self.split_fname[-1]
-
-        # self.response = "HTTP/1.1 200 OK\r\n Content-Type: text/{filetype}; charset=utf-8\r\n {date} \r\n".format(filetype=self.filetype, date=self.date)
+        self.filetype = mimetypes.guess_type(self.path)[0]
+        self.content_length = len(self.decoded)
 
         if self.decoded_list[0] == "GET":
             if self.isfile:
-                self.response = "HTTP/1.1 200 OK\r\n Content-Type: text/{filetype}; charset=utf-8\r\n {date} \r\n".format(filetype=self.filetype, date=self.date)
-                print("filename is: ", self.fname)
-                print(self.response)
-                print()
-                print()
-                print()
-                print()
+                self.request.sendall(bytearray("HTTP/1.1 200 OK \r\n",'utf-8'))
+                self.request.sendall(bytearray("Date: {}\r\n".format(self.date),'utf-8'))
+                self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
+                self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
+                self.request.sendall(bytearray("Content-Type: {}\r\n".format(self.filetype),'utf-8'))
+                self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
             else:
-                self.response = "HTTP/1.1 404 Not Found\r\n \r\n"
+                self.request.sendall(bytearray("HTTP/1.1 404 Not Found \r\n",'utf-8'))
+                self.request.sendall(bytearray("Date: {}\r\n".format(self.date),'utf-8'))
+                self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
+                self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
+                self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
         else:
-            self.response = "HTTP/1.1 400 Bad Request\r\n \r\n"
+            self.request.sendall(bytearray("HTTP/1.1 405 Not Found \r\n",'utf-8'))
+            self.request.sendall(bytearray("Date: {}\r\n".format(self.date),'utf-8'))
+            self.request.sendall(bytearray("Server: http://127.0.0.1:8080/\r\n",'utf-8'))
+            self.request.sendall(bytearray("Content-Length: {}\r\n".format(self.content_length),'utf-8'))
+            self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
 
-        self.request.sendall(bytearray(self.response,'utf-8'))
-
-
+# self.request.sendall(bytearray(self.response,'utf-8'))
+# self.request.sendall(bytearray("",'utf-8'))
 
 
 if __name__ == "__main__":
