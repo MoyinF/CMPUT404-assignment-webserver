@@ -1,14 +1,35 @@
-#  coding: utf-8 
+#  coding: utf-8
 import socketserver
+from datetime import datetime
+import os
+from pathlib import Path
 
+'''
+# this is meant to give a relative path from the current location
+data_folder = Path("source_data/text_files/")
+file_to_open = data_folder / "raw_data.txt"
+
+# this returns the filename from the path
+os.path.basename(self.path)
+
+# this is another way of doing it relatively
+cur_path = os.path.dirname(__file__)
+
+new_path = os.path.relpath('..\\subfldr1\\testfile.txt', cur_path)
+with open(new_path, 'w') as f:
+    f.write(data)
+
+# to check if the file exists
+os.path.isfile(fname)
+'''
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,18 +49,50 @@ import socketserver
 
 
 class MyWebServer(socketserver.BaseRequestHandler):
-    
+
     def handle(self):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        self.date = datetime.now()
+        self.date = self.date.strftime("%a, %d %b %y %H:%M:%S GMT")
+        self.decoded = self.data.decode()
+        self.decoded_list = self.decoded.split()
+        self.data_folder = "www"
+        self.fname = self.decoded_list[1]
+        self.path = self.data_folder + self.fname
+        self.isfile = os.path.exists(self.path)
+        self.split_fname = self.fname.split(".")
+        self.filetype = self.split_fname[-1]
+
+        # self.response = "HTTP/1.1 200 OK\r\n Content-Type: text/{filetype}; charset=utf-8\r\n {date} \r\n".format(filetype=self.filetype, date=self.date)
+
+        if self.decoded_list[0] == "GET":
+            if self.isfile:
+                self.response = "HTTP/1.1 200 OK\r\n Content-Type: text/{filetype}; charset=utf-8\r\n {date} \r\n".format(filetype=self.filetype, date=self.date)
+                print("filename is: ", self.fname)
+                print(self.response)
+                print()
+                print()
+                print()
+                print()
+            else:
+                self.response = "HTTP/1.1 404 Not Found\r\n \r\n"
+        else:
+            self.response = "HTTP/1.1 400 Bad Request\r\n \r\n"
+
+        self.request.sendall(bytearray(self.response,'utf-8'))
+
+
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
+    # port = 80
 
     socketserver.TCPServer.allow_reuse_address = True
     # Create the server, binding to localhost on port 8080
     server = socketserver.TCPServer((HOST, PORT), MyWebServer)
+
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
